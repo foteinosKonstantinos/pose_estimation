@@ -74,7 +74,7 @@ class Human_Pose_Estimator(Node):
         '''
         Parameters:
             image:      numpy array with dimensions height x width x 3 (H x W x 3)
-            depth_map:  numpy array with dimensions height x width x 3 (H x W x 3)
+            depth_map:  numpy array with dimensions height x width x 1 (H x W x 1)
         Returns:
             [
                 {
@@ -92,7 +92,10 @@ class Human_Pose_Estimator(Node):
             for i in range(len(names)):
                 uvcd:list = result[person][i][[0,1]].numpy().astype(int).tolist()
                 uvcd.append(result[person][i][2].item())
-                uvcd.append(depth_map[uvcd[1],uvcd[0]].item())
+                try:
+                    uvcd.append(depth_map[uvcd[1],uvcd[0]].item())
+                except IndexError:
+                    uvcd.append(0)
                 keypoints[-1][names[i]] = uvcd
         return keypoints
     
@@ -104,6 +107,8 @@ class Human_Pose_Estimator(Node):
         '''
         avg = u = v = 0
         for keypoint_name in keypoints.keys():
+            if keypoints[keypoint_name][3] == 0:
+                continue
             avg += keypoints[keypoint_name][3]
             u += keypoints[keypoint_name][0]
             v += keypoints[keypoint_name][1]
@@ -202,7 +207,7 @@ class Human_Pose_Estimator(Node):
         self.get_logger().info(f"Received RGBD frames of size {color_image.height} x {color_image.width} (H x W) at {self.__global_to_xy_position(lat=global_position.latitude, lon=global_position.longitude)} (mm)")
         
         color_image_array = np.asarray(color_image.data, dtype=np.float32).reshape((color_image.height, color_image.width, 3)) # H x W x 3
-        depth_map_array = np.asarray(depth_map.data, dtype=np.float32).reshape((depth_map.height, depth_map.width, 1)) # H x W x 1
+        depth_map_array = np.asarray(np.frombuffer(depth_map.data,dtype=np.uint16), dtype=np.float32).reshape((depth_map.height, depth_map.width, 1)) # H x W x 1
 
         all_keypoints = self.__detect_keypoints(image=color_image_array, depth_map=depth_map_array)
         features = []
@@ -212,18 +217,16 @@ class Human_Pose_Estimator(Node):
             angle = math.radians(self.__quaternion_to_rpy(odometry.pose.pose.orientation.x,odometry.pose.pose.orientation.y,odometry.pose.pose.orientation.z,odometry.pose.pose.orientation.w)["yaw"])
             det_global_position = self.__estimate_absolute_location(depth, global_position.latitude, global_position.longitude, math.cos(angle), math.sin(angle))
             features.append({
-                {
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": det_global_position
-                    },
-                    "properties": {
-                        "depth":depth,
-                        "timestamp":self.get_clock().now().nanoseconds,
-                        "keypoints_and_depths": single_person_keypoints,
-                        "relative_position": relative_position.tolist()
-                    }
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": det_global_position
+                },
+                "properties": {
+                    "depth":depth,
+                    "timestamp":self.get_clock().now().nanoseconds,
+                    "keypoints_and_depths": single_person_keypoints,
+                    "relative_position": relative_position.tolist()
                 }
             })
         
