@@ -1,5 +1,48 @@
+# Human Pose Estimation Node
 
+**Harokopio University of Athens**
 
+**Contact info: kfoteinos@hua.gr**
+
+### Provided interface
+
+| Topic name | Message type | Usage | Details |
+| --- | --- | --- | --- |
+| /camera_front/color | Image | Input | 8-bit RGB (H x W x 3) |
+| /camera_front/depth | Image | Input | 16UC1 in mm (H x W x 2) aligned to the RGB |
+| /camera_front/camera_info | CameraInfo | Input | - |
+| /fix | NavSatFix | Input | - |
+| /dog_odom | Odometry | Input | Orientation should be expresses wr.t. to a global coordinate system (the "standard" xy plane aligned to parallels and meridians) |
+| /human_pose | String | Output | Stringified GeoJSON, see below |
+
+The JSON provides the position of the human(s) (by averaging the position of the keypoints), not the position of each one keypoint. In particular, the "features" field of the published message has the following format:
+
+```json
+[
+    {
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [ <lon>, <lat> ]
+        },
+        "properties": {
+            "depth": <average depth in mm>,
+            "timestamp": <timestamp>,
+            "keypoints_and_depths": {
+                <keypoint name>: [ <u coordinate in pixels>, <v coordinate in pixels>, <confidence>, <depth in mm> ],
+                ...
+            }
+        },
+        "relative_position":[ <w.r.t. to camera coordinate system> ]
+    },
+    for every detected person
+    ...
+]
+```
+
+> Zero depth means u or v exceeds the limits of the depth frame, i.e. the detection falls out the image
+
+See also the example below, produced by the command `ros2 topic echo /human_pose --once --full`.
 
 ```json
 {
@@ -130,4 +173,78 @@
         }
     ]
 }
+```
+
+### Instructions for setup (docker)
+
+To build the image:
+```bash
+sudo docker build -t human_pose_container .
+```
+
+> To view the existing images:
+> ```bash
+> sudo docker images -a
+> ```
+>
+> To remove an image:
+> ```bash
+> sudo docker rmi human_pose_container
+> ```
+
+To create & enter the container (the `--net host` is mandatory to enable access to/from outside topics):
+```bash
+sudo docker run --net host -it human_pose_container /bin/bash
+```
+
+To view the running containers:
+```bash
+sudo docker container ps -a
+```
+
+> To remove all containers:
+> ```bash
+> sudo docker container prune
+> ```
+
+To enter the container:
+```bash
+sudo docker exec -it <container ID> bash
+```
+
+### Instructions for setup (run the given bag)
+
+Extract everything from the given .zip file and run:
+```bash
+ros2 bag play <mcap file> --loop
+```
+
+### Instructions for setup (run ROS)
+
+After entering the container:
+
+Activate ROS (Humble) (zsh, bash, ... according to your terminal):
+```bash
+source /opt/ros/humble/setup.bash
+```
+
+Build the package:
+```bash
+colcon build --packages-select pose_estimation
+```
+
+Run the following before use the package:
+```bash
+source ./install/local_setup.bash
+```
+
+Run the node:
+
+```bash
+ros2 run pose_estimation estimator
+```
+
+View the detections topic:
+```bash
+ros2 topic echo human_pose --once --full
 ```

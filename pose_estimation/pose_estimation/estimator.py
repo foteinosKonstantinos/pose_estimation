@@ -102,8 +102,12 @@ class Human_Pose_Estimator(Node):
 
     def __aggregate(self, keypoints:dict) -> float:
         '''
-        Keypoints of a single person in the format of __detect_keypoints output
-        Returns: depth d in the given units, uv in pixels
+        Parameters:
+            keypoints:  Keypoints of a single person in the format of __detect_keypoints output
+        Returns:
+            avg:    average depth of the keypoints (in the given depth measurement units)
+            u:      average u (in pixels)
+            v:      average v (in pixels)
         '''
         avg = u = v = 0
         for keypoint_name in keypoints.keys():
@@ -127,7 +131,7 @@ class Human_Pose_Estimator(Node):
             intrinsics: camera intrinsics (in pixels)
             f:          focal length (in mm)
         Returns:
-            the position in 3D space (in mm)
+            the x,y,z position in 3D space (in mm)
         '''
         Z = depth - f
         K = intrinsics
@@ -195,10 +199,13 @@ class Human_Pose_Estimator(Node):
     def __main_callback(self, color_image:Image, depth_map:Image, intrinsics:CameraInfo, global_position:NavSatFix, odometry:Odometry):
         '''
         Parameters:
-            in_data:    colored image represented as sensor_msgs/msg/Image of arbitrary dimensions
-            depth_map:  in mm
-            ....
-            Odometry orientation should be as described in (*), meaning that zero angle means the orientation is "co-linear" to a parallel
+            color_image:    8-bit RGB image (H x W x 3)
+            depth_map:      16UC1 in mm depth map (H x W x 2) of the same dimensions and aligned to the color_image
+            intrinsics:     Camera intrinsics (the code uses only K matrix)
+            global_position:Longitude/latitude (degrees)
+            odomometry:     The code needs the "absolute" orientation (w.r.t. to the "standard" xy plane), as described in (*)
+        Publishes:
+            See README
         '''
         
         assert color_image.height == depth_map.height and color_image.width == depth_map.width
