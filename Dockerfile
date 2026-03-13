@@ -1,4 +1,6 @@
+# For CPU:
 FROM ubuntu:22.04
+# For GPU: FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 WORKDIR /app
 
@@ -22,6 +24,7 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get install -y python3 python3-pip
 RUN apt-get clean
 
-# It is crucial to download ultralytics only for CPU; otherwise, the disk requirements are enormous.
+# For CPU:
 RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && pip cache purge
+# For GPU: RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 && pip cache purge
 RUN pip install --no-cache-dir ultralytics && pip cache purge

@@ -4,6 +4,10 @@
 
 **Contact info: kfoteinos@hua.gr**
 
+### General information
+
+This module takes as input aligned RGBD frames and the (global) pose of the camera (i.e. orientation and 2D position) at that timestamp (approximately) and obtains, for every visible human, the pixel coordinates (uv) of her/his keypoints (e.g. ankles, shoulders), their depth and estimation confidence. Further, it estimates the uv position and depth of each human by getting the average of the per-keypoint uv and depth. This information is utilized to predict the (global) longitude and latitude coordinates.
+
 ### Provided interface
 
 | Topic name | Message type | Usage | Details |
@@ -195,6 +199,11 @@ sudo docker build -t human_pose_container .
 To create & enter the container (the `--net host` is mandatory to enable access to/from outside topics):
 ```bash
 sudo docker run --net host -it human_pose_container /bin/bash
+```
+
+If GPU access is available:
+```bash
+sudo docker run --runtime=nvidia --net host -it human_pose_container /bin/bash
 ```
 
 To view the running containers:
